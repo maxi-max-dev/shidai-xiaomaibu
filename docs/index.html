@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+<title>小卖部柜台原型</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;700&display=swap">
+<style>
+/* 布局：上面是窗口外的门市，下面是柜台台面。左边：客人放东西的台面和你的托盘；右边：账本、放大镜、提子、钱匣、货架抽屉。一切靠拿、放、推，不靠选项。 */
+:root{
+  --wall:#E7EAE3; --dado:#2E5A4B; --dado-edge:#16322A; --on-dado:#D6E3DC;
+  --wood:#8A5A35; --wood-l:#A8744A; --wood-d:#5E3A20; --felt:#3C5A4A;
+  --paper:#F5F4EE; --card:#FCFCF8; --ink:#1D2420; --ink-soft:#58645D;
+  --seal:#B3312A; --gain:#2D7A4C; --gold:#E8C870;
+  --font-brush:'Ma Shan Zheng','STKaiti','KaiTi',serif;
+  --font-serif:'Noto Serif SC','Songti SC','SimSun',serif;
+  --font-ui:-apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+  color-scheme: light;
+}
+*{box-sizing:border-box}
+html{background:var(--dado)}
+body{margin:0;background:var(--dado);color:var(--ink);font-family:var(--font-ui);font-size:14px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+.top{max-width:1180px;margin:0 auto;padding:8px max(16px,env(safe-area-inset-right,0px)) 6px max(16px,env(safe-area-inset-left,0px));display:flex;justify-content:space-between;align-items:baseline;gap:12px;color:var(--on-dado)}
+.top h1{margin:0;font-family:var(--font-brush);font-weight:400;font-size:26px;color:#F6EBD2}
+.top .meta{display:flex;gap:12px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+.top .cash{font-weight:800;font-size:18px;color:#FFF3D0}
+.wrap{max-width:1180px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px));display:grid;gap:12px}
+@media (min-width:920px){ .wrap{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:start} }
+.col{display:grid;gap:10px;min-width:0}
+
+.scene-wrap{position:relative;border:3px solid var(--dado-edge);background:#000}
+#scene{display:block;width:100%;height:auto;aspect-ratio:192/112;image-rendering:pixelated}
+.say{position:absolute;left:52%;top:5%;max-width:62%;background:#FFFEF8;border:2px solid var(--ink);padding:6px 10px;font-family:var(--font-serif);font-size:14px;line-height:1.55;box-shadow:3px 3px 0 rgba(0,0,0,.35);pointer-events:none}
+.say:after{content:"";position:absolute;left:12px;bottom:-9px;border:7px solid transparent;border-top-color:var(--ink);border-bottom:0}
+.say b{font-family:var(--font-ui);font-size:12px;color:var(--ink-soft);display:block}
+.say:empty{display:none}
+.fx{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.float{position:absolute;transform:translate(-50%,-50%);font-weight:800;font-size:15px;color:#FFF8D8;text-shadow:0 1px 0 #3a2a10,1px 0 0 #3a2a10,-1px 0 0 #3a2a10,0 -1px 0 #3a2a10;animation:up 1.1s ease-out forwards;white-space:nowrap}
+.float.loss{color:#FFD2CC}
+@keyframes up{from{opacity:0;margin-top:6px}15%{opacity:1}to{opacity:0;margin-top:-26px}}
+
+/* 柜台台面 */
+.desk{background:linear-gradient(var(--wood-l) 0 8px,var(--wood) 8px);border:3px solid var(--wood-d);padding:10px;display:grid;gap:8px;box-shadow:inset 0 2px 0 #C99260}
+.zone{position:relative;min-height:84px;border:2px dashed rgba(255,240,210,.35);border-radius:3px;padding:20px 8px 8px;display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start}
+.zone > .lbl{position:absolute;left:8px;top:3px;font-size:11px;letter-spacing:.14em;color:#F5E6C8;opacity:.85}
+.their{background:rgba(0,0,0,.12)}
+.tray{background:linear-gradient(#B9BEC2,#9CA3A8);border:3px solid #6E767C;border-radius:6px;min-height:96px}
+.tray > .lbl{color:#2A3036}
+.drop-hot{outline:3px solid var(--gold);outline-offset:-3px}
+.desk-row{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
+.abacus{flex:1 1 220px;background:#3A2A1A;color:#F4E6C8;border:2px solid #1E140A;padding:6px 10px;font-variant-numeric:tabular-nums;display:grid;gap:2px;font-size:13px}
+.abacus b{font-size:16px}
+.push{flex:0 0 auto;min-width:120px;border:3px solid #2A1A0A;background:#C23B2E;color:#FFF4E8;font-weight:800;font-size:16px;letter-spacing:.1em;border-radius:4px;box-shadow:0 4px 0 #6A1E16;padding:8px 14px}
+.push:active{transform:translateY(3px);box-shadow:0 1px 0 #6A1E16}
+.push:disabled{opacity:.45}
+
+/* 可以拿起来的东西 */
+.thing{position:relative;display:grid;justify-items:center;gap:0;min-width:56px;padding:4px 6px 3px;background:#FFFEF6;border:2px solid var(--wood-d);border-radius:3px;font-size:12px;font-variant-numeric:tabular-nums;user-select:none;-webkit-user-select:none;touch-action:none;cursor:grab;box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.thing img{width:36px;height:36px;image-rendering:pixelated;pointer-events:none}
+.thing .n{font-weight:700}
+.thing.money{background:#2A1E12;color:#F4E6C8;border-color:#0F0A05}
+.thing.big img{width:44px;height:44px}
+.thing.paper{background:#F8EFD8;border-color:#9A6A3A;font-family:var(--font-serif)}
+.thing.inspectable:after{content:"🔍";position:absolute;right:-6px;top:-8px;font-size:12px;opacity:0;transition:opacity .2s}
+.inspecting .thing.inspectable{outline:2px dashed var(--gold);outline-offset:2px}
+.inspecting .thing.inspectable:after{opacity:1}
+.ghost{position:fixed;z-index:50;pointer-events:none;transform:translate(-50%,-60%) rotate(-4deg) scale(1.08);opacity:.92;box-shadow:0 10px 18px rgba(0,0,0,.45)}
+.bottle-wrap{display:grid;justify-items:center;gap:2px}
+.bottle{position:relative;width:34px;height:64px;border:3px solid #3a2a1a;border-radius:10px 10px 6px 6px;background:rgba(255,255,255,.55);overflow:hidden}
+.bottle:before{content:"";position:absolute;left:8px;right:8px;top:-3px;height:8px;background:#3a2a1a}
+.bottle i{position:absolute;left:0;right:0;bottom:0;background:#3a1e10}
+.bottle .mark{position:absolute;left:-3px;right:-3px;height:2px;background:var(--seal)}
+
+/* 右边：工具、钱匣、抽屉 */
+.panel{background:var(--paper);border:3px solid var(--wood-d);padding:10px;display:grid;gap:8px}
+.panel h2{margin:0;display:flex;justify-content:space-between;align-items:baseline;font-family:var(--font-brush);font-weight:400;font-size:20px}
+.panel h2 small{font-family:var(--font-ui);font-size:12px;color:var(--ink-soft)}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.tool{min-width:72px}
+.tool.on{outline:3px solid var(--gold)}
+.bell{border:3px solid #7a5a1a;background:#E8C870;border-radius:50% 50% 8px 8px;width:72px;font-weight:800;box-shadow:0 3px 0 #7a5a1a}
+.bell:disabled{opacity:.4}
+.bell.ring{animation:ring .6s ease-in-out infinite}
+@keyframes ring{25%{transform:rotate(-8deg)}75%{transform:rotate(8deg)}}
+.cashbox{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;background:#3A2A1A;padding:6px;border:3px solid #1E140A}
+.cashbox .thing{min-width:0}
+.drawer{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;background:#6A4A30;padding:6px;border:3px solid var(--wood-d)}
+.drawer .thing{min-width:0;background:#FBF6EA}
+.drawer .thing .p{font-size:11px;color:var(--seal);font-weight:700}
+.drawer .thing.want{box-shadow:0 0 0 3px var(--gain)}
+.taken{display:flex;gap:6px;flex-wrap:wrap;min-height:30px;align-items:center;font-size:12px;color:var(--ink-soft)}
+.log{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-height:220px;overflow:auto}
+.log li{font-family:var(--font-serif);font-size:13px;line-height:1.6;padding-left:8px;border-left:2px solid var(--seal)}
+.log li.sys{border-left-color:#AFC3D3;color:var(--ink-soft)}
+.hint{margin:0;font-size:12px;color:var(--ink-soft)}
+
+.modal{position:fixed;inset:0;z-index:60;background:rgba(10,22,17,.6);display:grid;place-items:center;padding:16px}
+.modal-card{background:var(--paper);border:3px solid var(--wood-d);padding:16px;max-width:520px;width:100%;display:grid;gap:10px}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.compare figure{margin:0;display:grid;justify-items:center;gap:6px;background:#FFF;border:1px solid #ccc;padding:10px}
+.compare img{width:96px;height:96px;image-rendering:pixelated}
+.compare figcaption{font-size:12px;text-align:center;color:var(--ink-soft)}
+.note-list{margin:0;padding-left:18px;font-family:var(--font-serif);font-size:14px;line-height:1.7}
+.btn{border:2px solid var(--ink);background:var(--card);padding:8px 14px;border-radius:3px;font-weight:700}
+.end{background:var(--paper);border:3px solid var(--wood-d);padding:16px;display:grid;gap:10px}
+.end h2{margin:0;font-family:var(--font-brush);font-weight:400;font-size:32px;color:var(--seal)}
+.end ul{margin:0;padding-left:18px;font-family:var(--font-serif);line-height:1.8}
+.snd{border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.25);color:#F4F1E4;border-radius:3px;padding:1px 8px;font-size:12px}
+.thing{transition:transform .12s ease,box-shadow .12s}
+.thing:hover{transform:translateY(-2px)}
+.thing.pop{animation:pop .38s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{0%{transform:scale(.4) rotate(-8deg);opacity:.2}70%{transform:scale(1.1)}100%{transform:none}}
+.flyer{position:fixed;margin:0;z-index:55;pointer-events:none;transition:transform .55s cubic-bezier(.5,0,.3,1),opacity .55s ease-in}
+body.dragging .zone,body.dragging .cashbox,body.dragging .drawer{box-shadow:0 0 0 3px rgba(232,200,112,.35)}
+body.dragging .bottle{box-shadow:0 0 0 3px rgba(232,200,112,.6)}
+.bottle i{transition:height .35s ease}
+.bottle-wrap.pouring .bottle{animation:wobble .45s}
+@keyframes wobble{30%{transform:rotate(-5deg)}70%{transform:rotate(4deg)}}
+.stamp{position:absolute;right:12px;top:18px;width:50px;height:50px;border:3px solid var(--seal);color:var(--seal);font-family:var(--font-brush);font-size:30px;line-height:44px;text-align:center;transform:rotate(-12deg);background:rgba(255,250,240,.75);pointer-events:none}
+.stamp.pop{animation:thump .4s ease-out}
+@keyframes thump{0%{transform:scale(2.2) rotate(-12deg);opacity:0}55%{transform:scale(.9) rotate(-12deg);opacity:1}100%{transform:scale(1) rotate(-12deg)}}
+.shake{animation:shake .35s}
+@keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+.drawer .thing.want{animation:want 1.6s ease-in-out infinite}
+@keyframes want{50%{box-shadow:0 0 0 6px rgba(45,122,76,.3)}}
+.end{animation:fadeIn .5s ease-out}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}}
+.say span:after{content:"▌";opacity:.35;animation:blink .8s steps(2) infinite}
+.say.doneTyping span:after{content:""}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="top">
+  <h1>第七门市部 · 柜台原型</h1>
+  <div class="meta"><span id="tDate">1984年7月16日 星期一</span><span id="tClock"></span><span id="tRep"></span><span class="cash" id="tCash"></span><button class="snd" id="snd" type="button" data-act="sound">声音：开</button></div>
+</div>
+
+<main class="wrap">
+  <div class="col">
+    <div class="scene-wrap">
+      <canvas id="scene" width="192" height="112" role="img" aria-label="像素画：柜台窗口外站着的客人"></canvas>
+      <div class="say" id="say" aria-live="polite"></div>
+      <div class="fx" id="fx" aria-hidden="true"></div>
+    </div>
+    <section class="desk" id="desk">
+      <div class="zone their" id="their" data-drop="their"><span class="lbl">客人放在柜台上的</span></div>
+      <div class="zone tray" id="tray" data-drop="tray"><span class="lbl">托盘 · 你要递过去的</span></div>
+      <div class="desk-row">
+        <div class="abacus" id="abacus"></div>
+        <button class="push" id="push" type="button" data-act="push">推过去</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="col">
+    <section class="panel">
+      <h2>手边 <small>拖到台面上用，也可以点一下</small></h2>
+      <div class="tools" id="tools"></div>
+    </section>
+    <section class="panel">
+      <h2>钱匣 <small>客人的钱拖进来；找零从这里拖到托盘</small></h2>
+      <div class="cashbox" id="cashbox" data-drop="cashbox"></div>
+    </section>
+    <section class="panel">
+      <h2>货架抽屉 <small>拖到托盘上，或点一下放一个</small></h2>
+      <div class="drawer" id="drawer" data-drop="drawer"></div>
+      <div class="taken" id="taken" data-drop="drawer"></div>
+    </section>
+    <section class="panel">
+      <h2>柜台小本 <small>刚才发生的事</small></h2>
+      <ul class="log" id="log"></ul>
+      <p class="hint">原型只有五位客人，用来试手感。拖动、点按都行。</p>
+    </section>
+  </div>
+</main>
+<div class="modal" id="modal" hidden></div>
+
+<script>
+'use strict';
+// ===== 货、钱、像素图（价格依据 research/1984-物价核实.md） =====
+const GOODS = {
+  soy:{n:'酱油',P:20,bulk:1}, oil:{n:'煤油',P:35,bulk:1}, liquor:{n:'散白酒',P:90,bulk:1}, salt:{n:'食盐',P:13,bulk:1},
+  sugar:{n:'白糖',P:82,bulk:1}, peanut:{n:'花生米',P:50,bulk:1}, match:{n:'火柴',P:2,u:'盒'}, cig:{n:'大前门',P:35,u:'包'},
+  soda:{n:'汽水',P:15,u:'瓶'}, ice:{n:'冰棍',P:3,u:'根'}, candy:{n:'水果糖',P:1,u:'颗'}, soap:{n:'肥皂',P:36,u:'条'},
+};
+const ORDER = ['soy','oil','liquor','salt','sugar','peanut','match','cig','soda','ice','candy','soap'];
+const DEN = [1,2,5,10,20,50,100,200,500,1000];
+const DEN_NAME = {1:'1分',2:'2分',5:'5分',10:'1角',20:'2角',50:'5角',100:'1元',200:'2元',500:'5元',1000:'10元'};
+const ICON_DRAW = {
+  soy: R=>{ R(6,1,4,2,'#5e3a20'); R(5,3,6,12,'#3a1e10'); R(6,4,1,9,'#6a3a20'); R(5,7,6,4,'#e8d8a8'); R(6,8,4,2,'#b3312a'); },
+  oil: R=>{ R(3,4,10,11,'#c9b35a'); R(3,4,10,1,'#e8d88a'); R(10,1,2,3,'#7a6a3a'); R(5,1,4,3,'#7a6a3a'); R(5,7,6,4,'#b3312a'); R(3,14,10,1,'#8a7a3a'); },
+  liquor: R=>{ R(4,4,8,11,'#8a5a35'); R(5,2,6,2,'#6a4226'); R(4,1,8,1,'#b3312a'); R(6,7,4,4,'#c23b2e'); R(7,8,2,2,'#f2d26a'); R(4,14,8,1,'#5e3a20'); },
+  salt: R=>{ R(3,3,10,12,'#f2f2ee'); R(3,3,10,1,'#d0d0c8'); R(5,1,6,2,'#e0e0d8'); R(4,8,8,3,'#3a7bd5'); R(3,14,10,1,'#c8c8c0'); },
+  sugar: R=>{ R(2,5,12,9,'#f6f1e3'); R(4,3,8,2,'#efe8d4'); R(6,1,4,2,'#e6dcc2'); R(6,8,4,3,'#c23b2e'); R(2,13,12,1,'#d6ccb4'); },
+  peanut: R=>{ R(3,6,4,6,'#d4a46a'); R(4,4,3,3,'#d4a46a'); R(8,7,5,6,'#c99050'); R(9,5,3,3,'#c99050'); R(2,12,12,2,'#b3312a'); },
+  match: R=>{ R(2,5,12,7,'#c99a5a'); R(2,5,12,2,'#e8d8b0'); R(2,10,12,2,'#8a5a2a'); R(3,6,1,4,'#b3312a'); R(12,6,1,4,'#b3312a'); },
+  cig: R=>{ R(3,2,10,12,'#f4f2ea'); R(3,2,10,4,'#c23b2e'); R(5,7,6,4,'#c23b2e'); R(6,8,4,2,'#f2d26a'); R(3,13,10,1,'#c8c4b8'); },
+  fake: R=>{ R(3,2,10,12,'#e8e4d8'); R(3,2,10,4,'#8f2a24'); R(5,7,6,4,'#8f2a24'); R(6,8,3,2,'#b8a050'); R(4,13,9,1,'#c8c4b8'); R(12,2,1,3,'#d8d4c8'); },
+  soda: R=>{ R(7,1,2,3,'#d8d8d8'); R(6,4,4,2,'#e8892f'); R(5,6,6,9,'#e8892f'); R(6,8,4,3,'#fff1c8'); R(5,6,1,8,'#f6b06a'); },
+  ice: R=>{ R(5,1,6,10,'#f8f8ff'); R(5,1,6,1,'#e0e8f8'); R(10,2,1,9,'#d8e0f0'); R(7,11,2,4,'#c9a06a'); },
+  candy: R=>{ R(5,5,6,6,'#eb5757'); R(6,6,4,4,'#f6a1a1'); R(2,6,3,4,'#f2c94c'); R(11,6,3,4,'#f2c94c'); R(1,7,1,2,'#f2c94c'); R(14,7,1,2,'#f2c94c'); },
+  soap: R=>{ R(2,5,12,7,'#e8c870'); R(2,5,12,1,'#f6e2a0'); R(2,11,12,1,'#c9a850'); R(5,7,6,2,'#c9a850'); },
+  grain: R=>{ R(1,4,14,9,'#e8dcc0'); R(1,4,14,1,'#c9b890'); R(3,6,4,4,'#c23b2e'); R(9,6,5,1,'#8a7a5a'); R(9,8,4,1,'#8a7a5a'); R(9,10,3,1,'#8a7a5a'); },
+  ledger: R=>{ R(2,2,12,12,'#2f4a7a'); R(2,2,12,1,'#456ab0'); R(3,3,1,10,'#1e3256'); R(6,5,6,1,'#e8e4d8'); R(6,7,6,1,'#e8e4d8'); R(11,9,2,4,'#b3312a'); },
+  glass: R=>{ R(3,2,7,7,'#5e3a20'); R(4,3,5,5,'#cfe8f0'); R(5,4,2,2,'#ffffff'); R(8,8,2,2,'#5e3a20'); R(10,10,2,2,'#5e3a20'); R(12,12,2,2,'#5e3a20'); },
+  ladle: R=>{ R(3,6,7,6,'#8a8a8a'); R(4,7,5,4,'#3a1e10'); R(9,5,1,1,'#8a8a8a'); R(10,4,1,1,'#8a8a8a'); R(11,3,1,1,'#8a8a8a'); R(12,2,2,1,'#8a8a8a'); },
+};
+const NOTE_COL = {10:'#a0623a',20:'#4f7f5a',50:'#6f5a8a',100:'#a8463a',200:'#3f7a6a',500:'#7a5f3a',1000:'#34465f'};
+function makeIcon(draw){ const c=document.createElement('canvas'); c.width=c.height=16; const x=c.getContext('2d'); draw((a,b,w,h,col)=>{x.fillStyle=col;x.fillRect(a,b,w,h);}); return c; }
+const ICON={}, URL_={};
+for (const k in ICON_DRAW){ ICON[k]=makeIcon(ICON_DRAW[k]); URL_[k]=ICON[k].toDataURL(); }
+for (const d of DEN){ URL_['m'+d]=makeIcon(R=>{
+  if (d<10){ const s=d===1?8:d===2?10:12, o=(16-s)/2; R(o+1,o,s-2,s,'#c9ccd2'); R(o,o+1,s,s-2,'#c9ccd2'); R(o+2,o+1,s-4,s-2,'#e6e8ec'); R(o+3,o+3,s-6,s-6,'#b4b8c0'); }
+  else { const col=NOTE_COL[d]; R(1,4,14,9,col); R(2,5,12,7,'#efe6cf'); R(3,6,10,5,col); R(5,7,6,3,'#efe6cf'); R(6,8,4,1,col); }
+}).toDataURL(); }
+const fmt = f => (f<0?'−':'')+'¥'+(Math.abs(f)/100).toFixed(2);
+const sumDen = m => DEN.reduce((s,d)=>s+d*(m[d]||0),0);
+const rnd = (a,b)=>a+Math.floor(Math.random()*(b-a+1));
+
+// ===== 五位客人：每位要你用手处理 =====
+const LOOK = {
+  postman:{hair:'cap', hc:'#3d6b3e', top:'#4d7a4a', pat:'work', skin:'#d99c74'},
+  jun:{hair:'crew', hc:'#1c1c1c', top:'#f1efe6', pat:'vest', trim:'#c0392b', kid:2, skin:'#e9b48c'},
+  aunt:{hair:'scarf', hc:'#2c3f66', top:'#4a4a5c', pat:'none', skin:'#d4a07a', old:1},
+  liu:{hair:'long', hc:'#151515', top:'#ece6d4', pat:'collar', shades:1, smoke:1, skin:'#d9a07a'},
+  fang:{hair:'braids', hc:'#161212', top:'#d2464b', pat:'collar', collar:'#f4efe4', skin:'#efbd98'},
+};
+const CUSTOMERS = [
+  {id:'w1', name:'骑车的邮递员', look:'postman', savvy:.6, line:'“两盒火柴，一瓶汽水。”他把一张两角的票子放在柜台上。', want:{match:2, soda:1}, money:{20:1}},
+  {id:'jun', name:'小军', look:'jun', line:'柜台边冒出一个小脑袋：“老板！我要五颗水果糖！”他把三个一分硬币摊在柜台上，被汗浸得发亮。', money:{1:3}},
+  {id:'w2', name:'赶集的大娘', look:'aunt', savvy:.9, line:'“打一斤酱油。”她把空酱油瓶和一张五角票子放在柜台上，“秤……哦不，提子给足啊。”', bottle:{g:'soy', want:100}, money:{50:1}},
+  {id:'liu', name:'刘哥', look:'liu', line:'刘哥把一包大前门扔在柜台上，蛤蟆镜推到脑门上：“上海来的，一条两块二，我这儿有两条，四块四。没发票，你懂的。”', items:['fakepack']},
+  {id:'fang', name:'阿芳', look:'fang', line:'阿芳把一沓全国粮票放在柜台上，用手压着边：“老板，收粮票吗？二十斤，六块钱就行。我想去深圳，路费还差一点。”', items:['grain']},
+];
+
+// ===== 状态 =====
+let S;
+function fresh(){ return {ci:0, phase:'shop', stock:{soy:2000,oil:1000,liquor:400,salt:1000,sugar:500,peanut:300,match:30,cig:15,soda:12,ice:20,candy:80,soap:6},
+  till:{1:20,2:15,5:12,10:12,20:8,50:6,100:5,200:2,500:1,1000:0}, rep:50, rel:{}, debts:{}, flags:{}, fake:0, grain:0, log:[], cur:null, inspecting:false}; }
+function cash(){ return sumDen(S.till); }
+function setup(){
+  const c=CUSTOMERS[S.ci];
+  S.cur = {their:{money:{...(c.money||{})}, items:[...(c.items||[])], bottle: c.bottle?{...c.bottle, fill:0}:null},
+    tray:{goods:{}, money:{}, ledger:false, items:[]}, taken:{money:{}, items:[]}, say:c.line, done:false, tries:0};
+}
+const C = () => CUSTOMERS[S.ci];
+const pending = g => (S.cur.tray.goods[g]||0) + (S.cur.their.bottle && S.cur.their.bottle.g===g ? S.cur.their.bottle.fill : 0);
+const avail = g => S.stock[g] - pending(g);
+function say(text){ S.cur.say=text; }
+function log(text, sys){ S.log.unshift({text, sys}); S.log=S.log.slice(0,30); }
+
+// ===== 手上的动作 =====
+let justPut=null;          // 刚放下的东西，画出来时弹一下
+const mark=(type,id)=>{ justPut={type, id:String(id)}; };
+const ACT = {
+  goodToTray(g){ if (S.cur.done) return; if (GOODS[g].bulk){ if (S.cur.their.bottle && S.cur.their.bottle.g===g) return ACT.pour(); say('散装的得用提子打进客人的瓶子里。'); return; } if (avail(g)<1){ say(`${GOODS[g].n}没了。`); return; } S.cur.tray.goods[g]=(S.cur.tray.goods[g]||0)+1; mark('trayGood',g); Sound.thud(); Scene.pop(); },
+  goodBack(g){ if (S.cur.tray.goods[g]>0) S.cur.tray.goods[g]--; if (!S.cur.tray.goods[g]) delete S.cur.tray.goods[g]; mark('good',g); Sound.thud(); },
+  moneyToTray(d){ if (S.cur.done || !(S.till[d]>0)) return; S.till[d]--; S.cur.tray.money[d]=(S.cur.tray.money[d]||0)+1; mark('trayMoney',d); d<10?Sound.coin():Sound.paper(); },
+  moneyBack(d){ if (!(S.cur.tray.money[d]>0)) return; S.cur.tray.money[d]--; if (!S.cur.tray.money[d]) delete S.cur.tray.money[d]; S.till[d]++; mark('den',d); d<10?Sound.coin():Sound.paper(); },
+  takeMoney(d){ const n=S.cur.their.money[d]; if (!n) return; delete S.cur.their.money[d]; S.cur.taken.money[d]=(S.cur.taken.money[d]||0)+n; mark('takenMoney',d); d<10?Sound.coin():Sound.paper(); },
+  untakeMoney(d){ const n=S.cur.taken.money[d]; if (!n) return; delete S.cur.taken.money[d]; S.cur.their.money[d]=(S.cur.their.money[d]||0)+n; mark('theirMoney',d); Sound.coin(); },
+  takeItem(k){ const i=S.cur.their.items.indexOf(k); if (i<0) return; S.cur.their.items.splice(i,1); S.cur.taken.items.push(k); mark('takenItem',k); Sound.paper(); },
+  untakeItem(k){ const i=S.cur.taken.items.indexOf(k); if (i<0) return; S.cur.taken.items.splice(i,1); S.cur.their.items.push(k); mark('theirItem',k); Sound.paper(); },
+  itemToTray(k){ const i=S.cur.their.items.indexOf(k); if (i>=0) S.cur.their.items.splice(i,1); else { const j=S.cur.taken.items.indexOf(k); if (j<0) return; S.cur.taken.items.splice(j,1); } S.cur.tray.items.push(k); mark('trayItem',k); Sound.paper(); },
+  itemFromTray(k){ const i=S.cur.tray.items.indexOf(k); if (i<0) return; S.cur.tray.items.splice(i,1); S.cur.their.items.push(k); mark('theirItem',k); Sound.paper(); },
+  ledger(on){ if (S.cur.done) return; const v = on ?? !S.cur.tray.ledger; if (v && !S.cur.tray.ledger){ mark('stamp','ledger'); Sound.stamp(); } else if (!v && S.cur.tray.ledger) Sound.paper(); S.cur.tray.ledger=v; },
+  pour(){ const b=S.cur.their.bottle; if (!b||S.cur.done) return; if (avail(b.g)<50){ say('缸里没酱油了。'); return; } b.fill+=50; mark('bottle','b'); Sound.pour(); Scene.pop(); },
+  unpour(){ const b=S.cur.their.bottle; if (!b||b.fill<=0) return; b.fill-=50; mark('bottle','b'); Sound.pour(); },
+  inspect(k){ S.inspecting=false; Sound.paper(); showInspect(k); },
+};
+
+// ===== 声音：用 WebAudio 现合成，不加载文件 =====
+const Sound=(()=>{
+  let ctx=null, on=true; try{ on=localStorage.getItem('xmb-sound')!=='0'; }catch(e){}
+  function ac(){ if (!on) return null; if (!ctx){ const A=window.AudioContext||window.webkitAudioContext; if (!A) return null; try{ ctx=new A(); }catch(e){ return null; } } if (ctx.state==='suspended') ctx.resume(); return ctx; }
+  function tone(f,dur,type,vol,when=0,slide){ const c=ac(); if (!c) return; const t0=c.currentTime+when; const o=c.createOscillator(), g=c.createGain(); o.type=type; o.frequency.setValueAtTime(f,t0); if (slide) o.frequency.exponentialRampToValueAtTime(slide,t0+dur); g.gain.setValueAtTime(vol,t0); g.gain.exponentialRampToValueAtTime(0.0008,t0+dur); o.connect(g).connect(c.destination); o.start(t0); o.stop(t0+dur+0.03); }
+  function noise(dur,vol,freq){ const c=ac(); if (!c) return; const b=c.createBuffer(1,Math.floor(c.sampleRate*dur),c.sampleRate), d=b.getChannelData(0); for (let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length); const s=c.createBufferSource(); s.buffer=b; const f=c.createBiquadFilter(); f.type='bandpass'; f.frequency.value=freq; const g=c.createGain(); g.gain.value=vol; s.connect(f).connect(g).connect(c.destination); s.start(); }
+  return {
+    coin(){ tone(2400,.07,'square',.035); tone(3100,.14,'sine',.05,.04); },
+    paper(){ noise(.12,.18,2600); },
+    pour(){ noise(.4,.14,520); tone(320,.35,'sine',.03,0,180); },
+    thud(){ tone(150,.12,'sine',.2,0,80); },
+    stamp(){ tone(95,.14,'square',.09); noise(.07,.25,300); },
+    slide(){ noise(.22,.1,850); },
+    bell(){ tone(1320,.7,'sine',.1); tone(1985,.45,'sine',.04,.01); },
+    ok(){ tone(660,.12,'triangle',.08); tone(880,.18,'triangle',.08,.1); },
+    nope(){ tone(220,.18,'triangle',.08); tone(180,.22,'triangle',.07,.12); },
+    set(v){ on=v; try{ localStorage.setItem('xmb-sound',v?'1':'0'); }catch(e){} },
+    get on(){ return on; },
+  };
+})();
+
+// ===== 推过去：客人看托盘上的东西，自己做反应 =====
+function push(){
+  const cur=S.cur; if (!cur || cur.done) return;
+  const c=C(); const before={cash:cash(), rep:S.rep, rel:{...S.rel}};
+  const trayEls=[...document.querySelectorAll('#tray .thing')].map(el=>[el,el.getBoundingClientRect()]);
+  const takenEls=[...document.querySelectorAll('#taken .thing.money')].map(el=>[el,el.getBoundingClientRect()]);
+  Sound.slide();
+  const res = RESOLVE[c.id] ? RESOLVE[c.id](cur,c) : RESOLVE.sale(cur,c);
+  if (!res){ shake('tray'); return render(); }       // 客人有话说，交易还没完
+  cur.done=true; say(res.say);
+  log(`<b>${c.name}</b>：${res.log}`);
+  const win=$('scene').getBoundingClientRect(), box=$('cashbox').getBoundingClientRect();
+  flyAll(trayEls, win.left+win.width*0.5, win.top+win.height*0.5);
+  flyAll(takenEls, box.left+box.width/2, box.top+box.height/2);
+  (res.emote==='dots' ? Sound.nope : Sound.ok)();
+  if (res.leave!==false) setTimeout(()=>{ Scene.leave(); render(); }, Scene.fast?300:1700);
+  Scene.react(before, res.emote, true);
+  render();
+}
+function flyAll(list,x,y){
+  for (const [el,r] of list){
+    const f=el.cloneNode(true); f.classList.add('flyer'); f.classList.remove('pop');
+    Object.assign(f.style,{left:r.left+'px', top:r.top+'px', width:r.width+'px', height:r.height+'px'});
+    document.body.appendChild(f); f.getBoundingClientRect();
+    f.style.transform=`translate(${x-r.left-r.width/2}px,${y-r.top-r.height/2}px) scale(.3) rotate(${(Math.random()*30-15)|0}deg)`; f.style.opacity='0';
+    setTimeout(()=>f.remove(),700);
+  }
+}
+function shake(id){ const el=$(id); if (!el) return; el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); Sound.thud(); }
+// 收钱入匣、货出柜
+function settle(cur){
+  for (const d in cur.taken.money) S.till[d]=(S.till[d]||0)+cur.taken.money[d];
+  for (const g in cur.tray.goods) S.stock[g]-=cur.tray.goods[g];
+  if (cur.their.bottle) S.stock[cur.their.bottle.g]-=cur.their.bottle.fill;
+}
+function returnTray(cur){ for (const d in cur.tray.money) S.till[d]+=cur.tray.money[d]; cur.tray.money={}; cur.tray.goods={}; }
+const RESOLVE = {
+  sale(cur,c){
+    for (const g in c.want){ const got=cur.tray.goods[g]||0; if (got<c.want[g]){ say(`“还差${c.want[g]-got}${GOODS[g].u}${GOODS[g].n}呢。”`); return null; } if (got>c.want[g]){ say(`“我就要${c.want[g]}${GOODS[g].u}${GOODS[g].n}，多了。”${c.name.slice(-2)}把多的推了回来。`); cur.tray.goods[g]=c.want[g]; return null; } }
+    for (const g in cur.tray.goods){ if (!c.want || !c.want[g]){ say(`“${GOODS[g].n}？我没要这个。”`); return null; } }
+    let price=0; for (const g in (c.want||{})) price+=GOODS[g].P*c.want[g];
+    const b=cur.their.bottle;
+    if (b){ if (b.fill<b.want){ say('“还没打够呢。”'); return null; } price+=Math.round(GOODS[b.g].P*b.want/100); }
+    const paid=sumDen(cur.taken.money);
+    if (!paid){ say('“钱在柜台上呢，你收一下呀。”'); return null; }
+    const due=paid-price, given=sumDen(cur.tray.money);
+    if (given<due && cur.tries<1 && Math.random()<c.savvy){ cur.tries++; S.rep-=1; say(`${c.name.includes('大娘')?'她':'他'}数了数零钱：“还少找我${due-given}分。”`); return null; }
+    settle(cur);
+    const notes=[];
+    if (b && b.fill>b.want){ S.rep+=1; notes.push('酱油打得满满当当。'); }
+    if (given<due){ S.flags.shortChange=1; notes.push(`少找了${due-given}分，没被发现。`); }
+    if (given>due){ notes.push(`多找了${given-due}分。`); }
+    return {say: given>due ? '“你这多找了吧？……算了，我走了。”' : pick(['“下回还来。”','钱货两清。','“你这儿比镇东头近多了。”']), log:`收了${fmt(paid)}，应收${fmt(price)}，找了${fmt(given)}。${notes.join('')}`, emote: given<due?null:'note'};
+  },
+  jun(cur){
+    const n=cur.tray.goods.candy||0, coins=sumDen(cur.taken.money);
+    for (const g in cur.tray.goods){ if (g!=='candy'){ say(`他歪着头看了看${GOODS[g].n}：“我要糖。”`); return null; } }
+    if (sumDen(cur.tray.money)){ say('“我不要钱，我要糖！”'); return null; }
+    if (n>5){ say('“我就要五颗。”他把多的推了回来。'); cur.tray.goods.candy=5; return null; }
+    if (n===0){ if (coins){ say('“糖呢？”他眼巴巴地看着你收走的硬币。'); return null; }
+      S.rel.jun=(S.rel.jun||0)-1; S.flags.junNo=1; return {say:'他把三个硬币捏回口袋，在柜台前站了一会儿才走。', log:'没卖给他。', emote:'dots'}; }
+    if (n<3 && coins){ say(`“我给了三分钱呀，才${n}颗？”`); return null; }
+    settle(cur);
+    if (!coins){ S.rel.jun=(S.rel.jun||0)+2; S.rep+=1; S.flags.junGift=1; return {say:'“不要钱？”他愣了一下，大声说了句“谢谢老板”，跑出去的时候差点撞上门框。', log:`送了他${n}颗糖，钱没收。`, emote:'heart'}; }
+    if (n===3) return {say:'他攥着三颗糖跑了。跑到门口，又停下来数了一遍。', log:'三分钱三颗糖。', emote:'note'};
+    if (cur.tray.ledger){ S.debts.jun=(S.debts.jun||0)+(n-3); S.rel.jun=(S.rel.jun||0)+1; S.flags.junDebt=1; return {say:`你翻开账本，写下：李军，欠${n-3}分。他踮着脚看你写字，很认真地点了点头。`, log:`给了${n}颗，差的${n-3}分记了账。`, emote:'heart'}; }
+    S.rel.jun=(S.rel.jun||0)+2; S.flags.junGift=1; return {say:'他发现糖多了两颗，愣了一下，冲你咧嘴笑。', log:`收了三分钱，给了${n}颗，多的算送他。`, emote:'heart'};
+  },
+  liu(cur){
+    const M=sumDen(cur.tray.money), took=cur.taken.items.includes('fakepack'), back=cur.tray.items.includes('fakepack');
+    if (Object.keys(cur.tray.goods).length){ say('“我卖烟，不买你的东西。”'); return null; }
+    if (took && M>=440){ settle(cur); S.fake+=20; S.rel.liu=(S.rel.liu||0)+2; S.flags.boughtFake=1; if (S.flags.inspectedFake) S.flags.knewFake=1;
+      return {say:`他从麻袋里又抽出一条，连那包一起塞到你柜台底下：“以后有好东西，先想着你。”${M>440?'多给的钱他没退。':''}`, log:`花${fmt(M)}收了二十包来路不明的大前门。`, emote:'heart'}; }
+    if (took && M<440){ say(`“两条四块四，${M?`你这才${fmt(M)}`:'钱呢'}？”`); return null; }
+    if (!took && M>0){ say('“钱我先不收，你烟也不拿？”'); return null; }
+    returnTray(cur);
+    S.rel.liu=(S.rel.liu||0)-1;
+    if (S.flags.inspectedFake){ S.flags.spottedFake=1; return {say:'“眼还挺尖。”刘哥把烟收回麻袋，“行，不勉强。”', log:'看出是冒牌烟，没要。', emote:'dots'}; }
+    return {say:'“行，你是本分人。”他把烟收回去，蹬上车走了。', log:'没要他的烟。', emote:'dots'};
+  },
+  fang(cur){
+    const M=sumDen(cur.tray.money), took=cur.taken.items.includes('grain');
+    if (Object.keys(cur.tray.goods).length){ say('“我……不是来买东西的。”'); return null; }
+    if (took){
+      if (M>=600){ settle(cur); S.grain+=20; S.rel.fang=(S.rel.fang||0)+2; S.flags.fangHelped=1; return {say:`她把钱叠成小方块，塞进衣服内兜：“等我在那边站住脚了，给你寄明信片。”${M>600?'多给的那些，她犹豫了一下，还是收下了。':''}`, log:`${fmt(M)}收了二十斤全国粮票。`, emote:'heart'}; }
+      if (M>=500){ settle(cur); S.grain+=20; S.flags.fangCheap=1; return {say:'她咬了咬嘴唇，还是点了头。', log:`${fmt(M)}压价收了她的粮票。`, emote:'dots'}; }
+      say(M?`“${fmt(M)}？太少了，至少五块。”`:'“你这是……白要啊？”'); return null;
+    }
+    if (M>=600){ settle(cur); S.debts.fang=(S.debts.fang||0)+M; S.rel.fang=(S.rel.fang||0)+3; S.flags.fangLent=1;
+      return {say: cur.tray.ledger ? `她看着你在账本上写：林芳，借${(M/100).toFixed(0)}元。她看了你很久：“我会还的。”` : '“粮票你不要？……那这钱算我借的，我会还的。”她自己在你账本上写了一行。', log:`粮票没要，借给她${fmt(M)}。`, emote:'heart'}; }
+    if (M>0){ say('“路费还差六块……这点不够。”她把钱推了回来。'); returnTray(cur); return null; }
+    S.rel.fang=(S.rel.fang||0)-1; return {say:'“没事。”她把粮票收回去，转身去了隔壁的裁缝铺。', log:'没收她的粮票。', emote:'dots'};
+  },
+};
+const pick = a => a[rnd(0,a.length-1)];
+
+function next(){ if (S.ci>=CUSTOMERS.length-1){ S.phase='end'; render(); return; } S.ci++; setup(); render(); }
+
+// ===== 细看 =====
+function showInspect(k){
+  const m=document.getElementById('modal');
+  if (k==='fakepack'){ S.flags.inspectedFake=1;
+    m.innerHTML=`<div class="modal-card"><h2 style="margin:0;font-family:var(--font-brush);font-weight:400">放大镜下</h2>
+      <div class="compare"><figure><img src="${URL_.fake}" alt=""><figcaption>刘哥的那包</figcaption></figure><figure><img src="${URL_.cig}" alt=""><figcaption>柜台里的正品</figcaption></figure></div>
+      <ul class="note-list"><li>红色偏暗，像褪了色。</li><li>“大前门”的金边糊了一块。</li><li>封口的锡纸歪着，没压平。</li></ul>
+      <button class="btn" type="button" data-act="closeModal">放下放大镜</button></div>`;
+  } else if (k==='grain'){
+    m.innerHTML=`<div class="modal-card"><h2 style="margin:0;font-family:var(--font-brush);font-weight:400">放大镜下</h2>
+      <div class="compare"><figure><img src="${URL_.grain}" alt=""><figcaption>全国通用粮票</figcaption></figure><figure style="text-align:left;justify-items:start;font-family:var(--font-serif);font-size:13px">中华人民共和国粮食部<br>全国通用粮票<br>伍市斤 × 4 张<br>纸张、水印都对</figure></div>
+      <button class="btn" type="button" data-act="closeModal">放下放大镜</button></div>`;
+  } else return;
+  m.hidden=false;
+}
+
+// ===== 像素场景（精简版） =====
+const Scene=(()=>{
+  const cv=document.getElementById('scene'), ctx=cv.getContext('2d'); const W=192,H=112,COUNTER=82;
+  let fast=false; try{ fast=localStorage.getItem('xmb-fast')==='1'; }catch(e){}
+  const V={t:0, actors:[], parts:[], cur:null};
+  const R=(x,y,w,h,c)=>{ ctx.fillStyle=c; ctx.fillRect(x|0,y|0,w|0,h|0); };
+  const lerp=(a,b,t)=>a+(b-a)*t;
+  const hex=c=>[parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)];
+  const mix=(a,b,t)=>'#'+hex(a).map((v,i)=>Math.round(lerp(v,hex(b)[i],t)).toString(16).padStart(2,'0')).join('');
+  function room(){
+    R(0,0,W,48,'#e3e0d1'); R(0,47,W,1,'#24473a'); R(0,48,W,32,'#3b6a57'); for (let x=0;x<W;x+=12) R(x,48,1,32,'#356150'); R(0,80,W,3,'#5e4e3e');
+    for (const [x0,y0,w,h] of [[15,14,34,66],[118,14,58,26]]){ ctx.save(); ctx.beginPath(); ctx.rect(x0,y0,w,h); ctx.clip();
+      for (let y=y0;y<y0+32;y++) R(x0,y,w,1,mix('#7fbfe6','#d6ecf2',(y-y0)/32)); R(160,20,5,5,'#fff1a8');
+      for (let x=0;x<W;x+=22){ R(x,36,20,10,'#a9a493'); R(x-1,33,22,3,'#6e7c86'); R(x+2,31,16,2,'#6e7c86'); }
+      R(0,44,W,2,'#8a8270'); R(0,46,W,40,'#c4ad86'); R(44,14,2,52,'#4a3a2a'); ctx.restore(); }
+    R(13,12,38,2,'#6a4226'); R(13,12,2,68,'#6a4226'); R(49,12,2,68,'#6a4226');
+    R(116,12,62,2,'#6a4226'); R(116,12,2,30,'#6a4226'); R(176,12,2,30,'#6a4226'); R(146,14,2,26,'#6a4226'); R(118,26,58,1,'#6a4226'); R(114,40,66,3,'#8a5a35');
+    R(156,36,9,4,'#e0913a'); R(163,34,4,4,'#e0913a');
+    R(58,14,19,23,'#f4f2ea'); R(58,14,19,4,'#c23b2e'); R(62,22,3,8,'#c23b2e'); R(67,22,6,2,'#c23b2e'); R(67,22,2,8,'#c23b2e'); R(67,28,6,2,'#c23b2e'); R(71,25,2,5,'#c23b2e'); R(67,25,6,2,'#c23b2e');
+    R(82,10,30,32,'#6a4226'); R(83,11,28,30,'#f0ede2'); R(83,11,28,3,'#b3312a'); for (let y=16;y<40;y+=3){ R(85,y,14,1,'#8a8a80'); R(102,y,7,1,'#b3312a'); }
+    R(96,0,1,8,'#333'); R(95,10,3,3,'#d8d6c8');
+  }
+  function counter(){
+    R(12,64,20,18,'#5a3420'); R(10,62,24,3,'#8a5a35'); R(36,68,12,14,'#7a5a3a'); R(37,66,10,3,'#b3312a');
+    R(54,68,10,14,'#cfe3e2'); R(53,66,12,2,'#c23b2e'); for (let i=0;i<Math.min(12,Math.floor(S.stock.candy/7));i++) R(55+(i%4)*2, 80-Math.floor(i/4)*2,1,1,['#f2c94c','#eb5757','#6fcf97'][i%3]);
+    R(124,76,14,6,'#5e3a20'); R(144,74,20,8,'#8a5a35'); for (let i=0;i<Math.min(12,S.stock.soda);i++) R(145+(i%6)*3, i<6?68:71, 2,6,'#e8892f');
+    R(166,66,22,16,'#eef3f5'); R(166,73,22,2,'#3a7bd5');
+    R(0,COUNTER,W,4,'#a8744a'); R(0,COUNTER,W,1,'#c99260'); R(0,86,W,26,'#7a4f2f');
+    // 台面上客人放的东西
+    const cur=S.cur; if (cur && !cur.done){ let x=70; for (const d in cur.their.money){ R(x,79,6,3,d<10?'#c9ccd2':NOTE_COL[d]); x+=8; } for (const k of cur.their.items){ ctx.drawImage(ICON[k==='fakepack'?'fake':k], x, 66); x+=18; } if (cur.their.bottle){ R(x,70,5,12,'#3a1e10'); R(x+1,68,3,2,'#5e3a20'); } }
+    if (S.fake>0){ R(22,100,14,10,'#bfa57a'); }
+  }
+  function person(a){
+    const L=a.look, x=Math.round(a.x)-8, kid=L.kid||0; const bob=a.state==='walk'?((V.t/140|0)%2):0; const y=(kid===2?60:40)+bob; const sk=L.skin, top=L.top, dark=mix(top,'#000000',.25);
+    R(x+2,y+13,12,40,top); R(x+1,y+15,1,22,top); R(x+14,y+15,1,22,top);
+    if (L.pat==='vest'){ R(x+1,y+14,2,18,sk); R(x+13,y+14,2,18,sk); R(x+5,y+12,6,3,sk); R(x+3,y+13,10,1,L.trim); }
+    if (L.pat==='collar'){ R(x+5,y+12,2,3,L.collar||'#f4efe4'); R(x+9,y+12,2,3,L.collar||'#f4efe4'); }
+    if (L.pat==='work'){ R(x+4,y+17,3,3,dark); R(x+9,y+17,3,3,dark); }
+    R(x+7,y+11,2,2,sk); R(x+4,y+2,8,9,sk);
+    const hc=L.hc;
+    ({crew:()=>{R(x+4,y+1,8,2,hc);}, cap:()=>{R(x+3,y,10,3,hc); R(x+2,y+3,8,1,mix(hc,'#000000',.3)); R(x+7,y+1,2,1,'#c23b2e');}, scarf:()=>{R(x+3,y,10,4,hc); R(x+2,y+3,2,8,hc); R(x+12,y+3,2,8,hc);},
+      long:()=>{R(x+3,y,10,3,hc); R(x+3,y+3,1,7,hc); R(x+12,y+3,1,7,hc);}, braids:()=>{R(x+4,y+1,8,3,hc); R(x+2,y+8,2,12,hc); R(x+12,y+8,2,12,hc); R(x+2,y+19,2,1,'#c23b2e'); R(x+12,y+19,2,1,'#c23b2e');}})[L.hair]();
+    if (L.shades) R(x+5,y+5,6,2,'#111'); else { R(x+6,y+6,1,1,'#1d1d1d'); R(x+9,y+6,1,1,'#1d1d1d'); }
+    const talk=a.talking&&((V.t/160|0)%2); R(x+7,y+9,2,talk?2:1,talk?'#7a2a22':'#9a4a3a');
+    if (L.smoke){ R(x+9,y+9,3,1,'#f4f4f4'); R(x+12,y+9,1,1,'#ff6a3a'); }
+    if (a.emote && a.emote.until>V.t){ const ex=x+12, ey=y-9; R(ex-1,ey-1,9,9,'#1d2420'); R(ex,ey,7,7,'#fffef8'); const m={heart:['01010','11111','11111','01110','00100'],note:['00110','00101','00100','11100','11100'],dots:['00000','00000','10101','00000','00000']}[a.emote.k]; const col={heart:'#e0435a',note:'#2d7a4c',dots:'#555'}[a.emote.k]; if (m) for (let r=0;r<5;r++) for (let c=0;c<5;c++) if (m[r][c]==='1') R(ex+1+c,ey+1+r,1,1,col); }
+  }
+  function sync(){
+    if (S.phase!=='shop'||!S.cur){ return; }
+    const tag='c'+S.ci; if (V.cur && V.cur.tag===tag){ V.cur.talking=!S.cur.done; return; }
+    if (S.cur.done) return;
+    const a={look:LOOK[C().look], x:30, tx:96, state:'walk', tag, talking:true}; V.actors.push(a); V.cur=a;
+  }
+  function react(before,k,handover){ const a=V.cur; if (a){ a.talking=false; if (k) a.emote={k,until:V.t+1800}; }
+    if (handover && a){ const cols=['#f2c94c','#e8892f','#eb5757','#c9ccd2','#8a6a3a']; for (let i=0;i<5;i++) V.parts.push({x0:78+i*9,y0:80,x1:a.x+(i%2?3:-3),y1:64,c:cols[i],t:-i*60,d:520}); }
+    const dc=cash()-before.cash; if (dc){ floatText((dc>0?'+':'')+fmt(dc),140,60,dc<0?'loss':''); for (let i=0;i<Math.min(6,Math.ceil(Math.abs(dc)/15));i++) V.parts.push({x0:dc>0?96:131,y0:dc>0?70:78,x1:dc>0?131:96,y1:dc>0?78:70,c:i%2?'#d4b04c':'#c9c9c9',t:-i*70,d:520}); } }
+  function floatText(text,x,y,cls){ const el=document.createElement('div'); el.className='float '+(cls||''); el.textContent=text; el.style.left=(x/W*100)+'%'; el.style.top=(y/H*100)+'%'; document.getElementById('fx').appendChild(el); setTimeout(()=>el.remove(),1200); }
+  function pop(){ V.parts.push({x0:96,y0:100,x1:96,y1:78,c:'#f2c94c',t:0,d:300}); }
+  function leave(){ if (V.cur){ V.cur.state='leave'; V.cur.tx=-10; V.cur.talking=false; V.cur=null; } }
+  let last=performance.now();
+  function frame(now){ const dt=Math.min(64,now-last); last=now; V.t+=dt; const k=fast?4:1;
+    if (S){ sync(); for (const a of V.actors){ if (Math.abs(a.tx-a.x)>0.5){ a.x+=Math.sign(a.tx-a.x)*Math.min(0.05*dt*k,Math.abs(a.tx-a.x)); if (a.state!=='leave') a.state='walk'; } else if (a.state==='walk') a.state='idle'; }
+      V.actors=V.actors.filter(a=>!(a.state==='leave'&&a.x<=-9)); for (const p of V.parts) p.t+=dt*k; V.parts=V.parts.filter(p=>p.t<p.d);
+      room(); for (const a of V.actors) person(a); counter(); for (const p of V.parts){ if (p.t<0) continue; const q=p.t/p.d; R(lerp(p.x0,p.x1,q), lerp(p.y0,p.y1,q)-Math.sin(Math.PI*q)*16, 2,2, p.c); } }
+    requestAnimationFrame(frame); }
+  requestAnimationFrame(frame);
+  return {react, leave, pop, get fast(){return fast;}, arrived(){ return !!(V.cur && V.cur.tag==='c'+S.ci && V.cur.state==='idle') || (S.cur && S.cur.done); }};
+})();
+
+// ===== 画界面 =====
+const $=id=>document.getElementById(id);
+// 客人说话一个字一个字冒出来；人还没走到柜台前就先不说
+const typing={text:null, i:0, timer:null};
+function sayBubble(){
+  const el=$('say'), cur=S.cur; if (!cur){ el.innerHTML=''; return; }
+  const text=cur.say||'', name=C().name;
+  if (text===typing.text) return;
+  clearInterval(typing.timer); typing.text=text; typing.i=0; el.classList.remove('doneTyping');
+  if (!text){ el.innerHTML=''; return; }
+  if (Scene.fast || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)){ el.innerHTML=`<b>${name}</b>${text}`; el.classList.add('doneTyping'); return; }
+  el.innerHTML=`<b>${name}</b><span></span>`; const span=el.querySelector('span');
+  typing.timer=setInterval(()=>{ if (!Scene.arrived()) return; typing.i+=2; span.textContent=text.slice(0,typing.i); if (typing.i>=text.length){ clearInterval(typing.timer); el.classList.add('doneTyping'); } }, 30);
+}
+function applyFresh(){
+  if (!justPut) return; const f=justPut; justPut=null; let el, cls='pop';
+  if (f.type==='stamp') el=document.querySelector('#tray .stamp');
+  else if (f.type==='bottle'){ el=document.querySelector('.bottle-wrap'); cls='pouring'; }
+  else el=document.querySelector(`[data-drag="${f.type}"][data-id="${f.id}"]`);
+  if (!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+}
+const thing = (drag, id, iconKey, label, extra='') => `<div class="thing ${extra}" role="button" tabindex="0" data-drag="${drag}" data-id="${id}" data-drop="item">${iconKey?`<img src="${URL_[iconKey]}" alt="">`:''}<span class="n">${label}</span></div>`;
+function render(){
+  $('tCash').textContent=fmt(cash()); $('tRep').textContent=`第 ${Math.min(S.ci+1,CUSTOMERS.length)} / ${CUSTOMERS.length} 位客人`;
+  const mins=7*60+S.ci*47+(S.cur&&S.cur.done?15:0); $('tClock').textContent=`上午 ${Math.floor(mins/60)}:${String(mins%60).padStart(2,'0')}`;
+  $('snd').textContent = Sound.on ? '声音：开' : '声音：关';
+  document.body.classList.toggle('inspecting', !!S.inspecting);
+  if (S.phase==='end') return renderEnd();
+  const cur=S.cur, c=C();
+  // 客人放在柜台上的
+  let th='<span class="lbl">客人放在柜台上的</span>';
+  if (!cur.done){
+    for (const d of DEN) if (cur.their.money[d]) th+=thing('theirMoney',d,'m'+d,`${DEN_NAME[d]}×${cur.their.money[d]}`,'money');
+    for (const k of cur.their.items) th+=thing('theirItem',k,k==='fakepack'?'fake':k, k==='fakepack'?'大前门 1 包':'全国粮票 20 斤','big inspectable '+(k==='grain'?'paper':''));
+    if (cur.their.bottle){ const b=cur.their.bottle; const fill=Math.min(100,b.fill/(b.want*1.5)*100), mark=b.want/(b.want*1.5)*100;
+      th+=`<div class="bottle-wrap" data-drop="bottle"><div class="bottle" data-drop="bottle"><i style="height:${fill}%"></i><span class="mark" style="bottom:${mark}%"></span></div><span style="color:#F5E6C8;font-size:12px">${b.fill/100} 斤 / 要 ${b.want/100} 斤</span>${b.fill?`<button class="btn" style="padding:2px 6px;font-size:12px" type="button" data-act="unpour">倒回去半斤</button>`:''}</div>`; }
+  }
+  $('their').innerHTML=th;
+  // 托盘
+  let tr='<span class="lbl">托盘 · 你要递过去的</span>';
+  if (!cur.done){
+    for (const g of ORDER) if (cur.tray.goods[g]) tr+=thing('trayGood',g,g,`${GOODS[g].n}×${cur.tray.goods[g]}`);
+    for (const d of DEN) if (cur.tray.money[d]) tr+=thing('trayMoney',d,'m'+d,`${DEN_NAME[d]}×${cur.tray.money[d]}`,'money');
+    for (const k of cur.tray.items) tr+=thing('trayItem',k,k==='fakepack'?'fake':k,'推回给他','big');
+    if (cur.tray.ledger) tr+=thing('trayLedger','ledger','ledger','记一笔账')+'<span class="stamp" aria-hidden="true">记</span>';
+  }
+  $('tray').innerHTML=tr;
+  // 算盘：只报数，不替你做决定
+  const paid=sumDen(cur.taken.money), giving=sumDen(cur.tray.money);
+  let price=0; if (c.want) for (const g in c.want) price+=GOODS[g].P*c.want[g]; if (c.bottle) price+=Math.round(GOODS[c.bottle.g].P*c.bottle.want/100);
+  $('abacus').innerHTML = price ? `<span>牌价 <b>${fmt(price)}</b>　收进钱匣 <b>${fmt(paid)}</b></span><span>${paid?`应找 <b>${fmt(Math.max(0,paid-price))}</b>　`:''}托盘上的钱 <b>${fmt(giving)}</b></span>`
+    : `<span>托盘上的钱 <b>${fmt(giving)}</b>　收进钱匣 <b>${fmt(paid)}</b></span><span style="opacity:.75">这位不是来买东西的</span>`;
+  $('push').disabled = cur.done;
+  // 手边的工具
+  $('tools').innerHTML = thing('ledger','ledger','ledger','账本','tool'+(cur.tray.ledger?' on':'')) + thing('glass','glass','glass','放大镜','tool'+(S.inspecting?' on':'')) + thing('ladle','ladle','ladle','酱油提子','tool')
+    + `<button class="bell ${cur.done?'ring':''}" type="button" data-act="next" ${cur.done?'':'disabled'}>叫下一位</button>`;
+  // 钱匣
+  let cb=''; for (const d of DEN) cb+=thing('den',d,'m'+d,`${DEN_NAME[d]} ×${S.till[d]||0}`,'money');
+  $('cashbox').innerHTML=cb;
+  // 抽屉
+  const want=c.want||{}; let dr='';
+  for (const g of ORDER){ const n=g==='soy'||GOODS[g].bulk ? (S.stock[g]/100).toFixed(1)+'斤' : `${avail(g)}${GOODS[g].u}`;
+    dr+=`<div class="thing${want[g]||(c.bottle&&c.bottle.g===g)?' want':''}" role="button" tabindex="0" data-drag="good" data-id="${g}"><img src="${URL_[g]}" alt=""><span class="n">${GOODS[g].n}</span><span class="p">${fmt(GOODS[g].P)}</span><span>${n}</span></div>`; }
+  $('drawer').innerHTML=dr;
+  let tk = '';
+  for (const k of cur.taken.items) tk+=thing('takenItem',k,k==='fakepack'?'fake':k, k==='fakepack'?'收下的烟':'收下的粮票','big inspectable');
+  for (const d of DEN) if (cur.taken.money[d]) tk+=thing('takenMoney',d,'m'+d,`收进 ${DEN_NAME[d]}×${cur.taken.money[d]}`,'money');
+  $('taken').innerHTML = tk || '收进来的东西会放在这儿，点一下可以还回去。';
+  $('log').innerHTML = S.log.map(l=>`<li class="${l.sys?'sys':''}">${l.text}</li>`).join('') || '<li class="sys">还没开张。</li>';
+  sayBubble(); applyFresh();
+}
+function renderEnd(){
+  clearInterval(typing.timer); typing.text=null; $('say').innerHTML='<b>门市部</b>五位客人都走了。'; $('say').classList.add('doneTyping');
+  const f=S.flags, lines=[];
+  if (f.junDebt) lines.push('小军的账记在了账本第一页。'); else if (f.junGift) lines.push('你送了小军几颗糖。'); else if (f.junNo) lines.push('小军空着手走了。');
+  if (f.boughtFake) lines.push(f.knewFake?'你明知道是冒牌烟，还是收了刘哥的货。':'你收了刘哥二十包来路不明的大前门。'); else if (f.spottedFake) lines.push('你用放大镜看出刘哥的烟是冒牌的。');
+  if (f.fangLent) lines.push('你借了阿芳路费，粮票没要。'); else if (f.fangHelped) lines.push('你按她开的价收了阿芳的粮票。'); else if (f.fangCheap) lines.push('你压价收了阿芳的粮票。');
+  if (f.shortChange) lines.push('有一回你少找了钱，客人没发现。');
+  $('desk').innerHTML=`<div class="end"><h2>原型到这里</h2><ul>${lines.map(l=>`<li>${l}</li>`).join('')||'<li>平平常常的一个上午。</li>'}</ul><p class="hint" style="color:#F5E6C8">钱匣里 ${fmt(cash())}。这些选择全是用手做的，没有一个选项按钮。</p><button class="btn" type="button" data-act="again">再来一次</button></div>`;
+}
+
+// ===== 拖放和点按 =====
+let drag=null;
+document.addEventListener('pointerdown', e=>{ const el=e.target.closest('[data-drag]'); if (!el || e.button>0) return; e.preventDefault(); drag={el,type:el.dataset.drag,id:el.dataset.id,x0:e.clientX,y0:e.clientY,ghost:null}; });
+document.addEventListener('pointermove', e=>{ if (!drag) return; if (!drag.ghost && Math.hypot(e.clientX-drag.x0,e.clientY-drag.y0)>6){ drag.ghost=drag.el.cloneNode(true); drag.ghost.classList.add('ghost'); document.body.appendChild(drag.ghost); document.body.classList.add('dragging'); }
+  if (drag.ghost){ drag.ghost.style.left=e.clientX+'px'; drag.ghost.style.top=e.clientY+'px'; document.querySelectorAll('.drop-hot').forEach(x=>x.classList.remove('drop-hot')); const t=dropAt(e.clientX,e.clientY); if (t) t.classList.add('drop-hot'); } });
+document.addEventListener('pointerup', e=>{ if (!drag) return; const d=drag; drag=null; document.body.classList.remove('dragging'); document.querySelectorAll('.drop-hot').forEach(x=>x.classList.remove('drop-hot'));
+  if (d.ghost){ d.ghost.remove(); const t=dropAt(e.clientX,e.clientY,d.type); if (t) onDrop(d.type,d.id,t.dataset.drop,t.dataset.id); } else onTap(d.type,d.id); });
+document.addEventListener('pointercancel', ()=>{ if (drag&&drag.ghost) drag.ghost.remove(); drag=null; document.body.classList.remove('dragging'); });
+// 落点：拿放大镜时认具体的东西，其余时候认它所在的那块台面
+function dropAt(x,y,type){ const el=document.elementFromPoint(x,y); let t=el && el.closest('[data-drop]');
+  if (t && t.dataset.drop==='item' && type!=='glass') t=t.parentElement && t.parentElement.closest('[data-drop]');
+  return t; }
+document.addEventListener('keydown', e=>{ if ((e.key==='Enter'||e.key===' ') && e.target.matches('[data-drag]')){ e.preventDefault(); onTap(e.target.dataset.drag, e.target.dataset.id); } });
+
+function onTap(type,id){
+  if (S.phase!=='shop') return;
+  if (S.inspecting && (type==='theirItem'||type==='takenItem')){ ACT.inspect(id); return render(); }
+  const map={ good:()=>ACT.goodToTray(id), trayGood:()=>ACT.goodBack(id), den:()=>ACT.moneyToTray(+id), trayMoney:()=>ACT.moneyBack(+id),
+    theirMoney:()=>ACT.takeMoney(+id), takenMoney:()=>ACT.untakeMoney(+id), theirItem:()=>ACT.takeItem(id), takenItem:()=>ACT.untakeItem(id),
+    trayItem:()=>ACT.itemFromTray(id), ledger:()=>ACT.ledger(), trayLedger:()=>ACT.ledger(false), glass:()=>{ S.inspecting=!S.inspecting; }, ladle:()=>ACT.pour() };
+  if (map[type]) map[type](); render();
+}
+function onDrop(type,id,target,targetId){
+  if (S.phase!=='shop') return;
+  const T=target;
+  if (type==='good' && (T==='tray'||T==='item')) ACT.goodToTray(id);
+  else if (type==='good' && T==='bottle') ACT.goodToTray(id);
+  else if (type==='trayGood' && (T==='drawer')) ACT.goodBack(id);
+  else if (type==='den' && (T==='tray'||T==='item')) ACT.moneyToTray(+id);
+  else if (type==='trayMoney' && T==='cashbox') ACT.moneyBack(+id);
+  else if (type==='theirMoney' && (T==='cashbox'||T==='drawer')) ACT.takeMoney(+id);
+  else if (type==='takenMoney' && T==='their') ACT.untakeMoney(+id);
+  else if (type==='theirItem' && (T==='drawer'||T==='cashbox')) ACT.takeItem(id);
+  else if (type==='theirItem' && T==='tray') ACT.itemToTray(id);
+  else if (type==='takenItem' && (T==='their')) ACT.untakeItem(id);
+  else if (type==='takenItem' && T==='tray') ACT.itemToTray(id);
+  else if (type==='trayItem' && T==='their') ACT.itemFromTray(id);
+  else if (type==='ledger' && (T==='tray'||T==='item')) ACT.ledger(true);
+  else if (type==='trayLedger' && T!=='tray') ACT.ledger(false);
+  else if (type==='glass' && T==='item' && targetId) { ACT.inspect(targetId); }
+  else if (type==='ladle' && T==='bottle') ACT.pour();
+  render();
+}
+document.addEventListener('click', e=>{ const b=e.target.closest('[data-act]'); if (!b||b.disabled) return;
+  const a=b.dataset.act;
+  if (a==='push') push(); else if (a==='next'){ Sound.bell(); next(); } else if (a==='unpour'){ ACT.unpour(); render(); }
+  else if (a==='closeModal'){ $('modal').hidden=true; render(); } else if (a==='again'){ restart(); }
+  else if (a==='sound'){ Sound.set(!Sound.on); if (Sound.on) Sound.coin(); render(); } });
+
+// 测试用
+window.__desk={ get S(){return S;}, ACT, push, next, onTap, onDrop };
+const DESK_HTML=$('desk').innerHTML;
+function restart(){ S=fresh(); setup(); $('desk').innerHTML=DESK_HTML; typing.text=null; log('早上七点，你卸下门板。第一位客人已经在柜台前了。',1); render(); }
+restart();
+</script>
+
+</body>
+</html>
