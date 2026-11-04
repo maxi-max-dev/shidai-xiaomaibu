@@ -7,16 +7,19 @@
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-HEAD = ('<!doctype html>\n<html lang="zh-CN">\n<head>\n<meta charset="utf-8">\n'
+HEAD = ('<!DOCTYPE html>\n<html lang="zh-CN">\n<head>\n<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n'
         '<style>:root{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}'
-        '[hidden]{display:none!important}img{max-width:100%}</style>\n</head>\n<body>\n')
+        '[hidden]{display:none!important}img{max-width:100%}</style>\n')
 PAGES = {'desk.html': 'index.html', 'index.html': 'chapter1.html'}
 
 out = ROOT / 'docs'
 out.mkdir(exist_ok=True)
 for src, dst in PAGES.items():
-    body = (ROOT / src).read_text(encoding='utf-8')
-    (out / dst).write_text(HEAD + body + '\n</body>\n</html>\n', encoding='utf-8')
+    text = (ROOT / src).read_text(encoding='utf-8')
+    # 源文件开头的 <title>、<meta>、<link> 和第一段 <style> 放进 <head>，其余放进 <body>
+    cut = text.index('</style>') + len('</style>')
+    head, body = text[:cut], text[cut:]
+    (out / dst).write_text(HEAD + head + '\n</head>\n<body>' + body + '\n</body>\n</html>\n', encoding='utf-8')
     print(f'{src} -> docs/{dst}')
 (out / '.nojekyll').write_text('', encoding='utf-8')
